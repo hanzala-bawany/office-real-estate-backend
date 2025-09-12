@@ -1,0 +1,146 @@
+import { errorHandler, successHandler } from "../utills/responseHandler.js"
+import pkg from "jsonwebtoken"
+import bcrypt from "bcryptjs";
+import { Users } from "../models/authModel.js"
+import { sendVerificationEmail } from "../verifyEmail/sendEmail.js";
+
+
+const { sign } = pkg;
+const { hash, compare } = bcrypt
+
+
+export const signupController = async (req, res) => {
+
+    console.log("signup chala")
+    console.log(req.body, "req.body");
+
+    try {
+
+        const { userName, email, password, avatar } = req.body
+
+        if (!userName || !email || !password) {
+            return errorHandler(res, 400, "Missing Fields");
+        }
+        if (!email.includes("@")) {
+            return errorHandler(res, 400, "Invalid Email");
+        }
+        if (password.length < 6 || password.length > 12) {
+            return errorHandler(res, 400, "password must greater then 6 and smaller then 12");
+        }
+
+        const isExist = await Users.findOne({ email: email });   // ye kaam schema se bhi kar dia he ye bas ees hi for pract
+        if (isExist) return errorHandler(res, 402, "User already exist");
+
+        const hashedPassword = await hash(password, 10);
+        const verificationCode = Math.floor(100000 + Math.random() * 900000);
+
+        sendVerificationEmail(email, verificationCode.toString())
+
+        const createdUser = await Users.create({
+            userName,
+            email,
+            password: hashedPassword,
+            avatar,
+            verificationCode
+        })
+
+        successHandler(res, 200, "User Registered Successfully")
+
+    }
+    catch (error) {
+
+        if (error.code === 11000) {
+            return errorHandler(res, 409, "User already exists");
+        }
+        errorHandler(res, 500, "Something went wrong, please try again later", error);
+    }
+
+}
+
+export const loginController = (req, res) => {
+    res.send("login chala")
+}
+
+export const logoutController = (req, res) => {
+    res.send("login chala")
+} 
+
+// userVerification controller
+export const userVerification = async (req, res) => {
+
+    const { userCode } = req.body
+    console.log(userCode, "<----user code");
+
+    try {
+
+        const verifiedUserUpdate = await Users.updateOne({ verificationCode: userCode }, {
+            $set: {
+                isVerified: true
+            },
+            $unset: {
+                verificationCode: ""
+            }
+        })
+
+        if (verifiedUserUpdate.matchedCount === 0) return errorHandler(res, 404, "Invalid Code")  // is ka matlab  { verificationCode: userCode } esa koi document nahi mila
+
+        console.log(verifiedUserUpdate, "<----verifiedUserUpdate verified user update res");
+        successHandler(res, 200, "User verified successfully", verifiedUserUpdate)
+    }
+    catch (err) {
+        console.log(err);
+        errorHandler(res, 404, "User not verified", err)
+    }
+}
+
+// verificationCodeDeleted controller
+export const verificationCodeDeleted = async (req, res) => {
+
+    try {
+        const { email } = req.body
+        // console.log(email , "email jis ka varification code dekte kar na he ");
+
+        const verificationCodeDeleted = await Users.updateOne({ email: email }, {
+            $unset: {
+                verificationCode: ""
+            }
+        })
+
+        if (verificationCodeDeleted.matchedCount === 0) return errorHandler(res, 404, "User Not Found", res.error)
+        // console.log(verificationCodeDeleted , "user ka ceriifcation code dleete ho gaya he ");
+
+        successHandler(res, 200, "User verification code deleted successfully", verificationCodeDeleted)
+    }
+    catch (err) {
+        console.log(err, "<--- verificationCodeDeleterAfter3m  error he");
+        errorHandler(res, 404, "user not found", err)
+    }
+
+}
+
+// resendCode controller
+export const resendCode = async (req, res) => {
+
+    try {
+        const { email } = req.body
+        const verificationCode = Math.floor(100000 + Math.random() * 900000);
+
+        const resendCodeSend = await Users.updateOne({ email: email }, {
+            $set: {
+                verificationCode
+            }
+        })
+
+        if (resendCodeSend.matchedCount === 0) return errorHandler(res, 404, "User Not Found", resendCodeSend.error)
+
+            sendVerificationEmail(email, verificationCode.toString())
+        return successHandler(res, 200, "User verification code resend successfully", resendCodeSend)
+    }
+    catch (err) {
+        console.log(err, "<--- resendCode  error he");
+        errorHandler(res, 404, "user not found , verification code can not resend", err)
+    }
+
+}
+
+
