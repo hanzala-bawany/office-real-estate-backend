@@ -2,8 +2,10 @@ import { errorHandler, successHandler } from "../utills/responseHandler.js"
 import pkg from "jsonwebtoken"
 import bcrypt from "bcryptjs";
 import { Users } from "../models/authModel.js"
-import { sendVerificationEmail } from "../verifyEmail/sendEmail.js";
+import { sendVerificationEmail, sendWelcomeEmail } from "../verifyEmail/sendEmail.js";
+import dotenv from 'dotenv';
 
+dotenv.config();
 
 const { sign } = pkg;
 const { hash, compare } = bcrypt
@@ -57,13 +59,71 @@ export const signupController = async (req, res) => {
 
 }
 
-export const loginController = (req, res) => {
-    res.send("login chala")
-}
+
+// login controller
+export const loginController = async (req, res) => {
+    console.log("login chala");
+
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) return errorHandler(res, 400, "Miising Fields !");
+
+        if (!email.includes("@"))
+            return errorHandler(res, 400, "Email is not valid");
+
+        if (password.length < 6 || password.length > 12)
+            return errorHandler(
+                res,
+                401,
+                "Password must greater then 6 and less then 12"
+            );
+
+        const isExist = await Users.findOne({ email: email });
+        if (!isExist) return errorHandler(res, 404, "User not found");
+        // if (!isExist.isVerified) return errorHandler(res, 401, "Unauthorized User");
+
+
+        const comparePass = await compare(password, isExist?.password);
+        if (!comparePass) return errorHandler(res, 404, "invalid password");
+
+        const token = sign(
+            {
+                userId: isExist._id,
+                userEmail: email,
+                isAdmin: isExist.isAdmin,
+            },
+            process.env.JWT_secretKey,
+            { expiresIn: "24h" }
+        );
+
+        res.cookie("token", token, {
+            httpOnly: true,
+            sameSite: "Lax", 
+            secure: process.env.NODE_ENV === "development" ? false : true,
+        }).status(200).json("User login successfully");
+
+        console.log("login in  successfully", isExist);
+        sendWelcomeEmail(isExist.email, isExist.userName)
+
+    } catch (err) {
+        console.log(err, "loginUser me error he");
+        errorHandler(res, 402, "user cant login", err);
+    }
+
+};
+
 
 export const logoutController = (req, res) => {
-    res.send("login chala")
-} 
+
+    res.clearCookie("token" ,  {
+        httpOnly: true,
+        sameSite: "Lax", 
+        secure: process.env.NODE_ENV === "development" ? false : true,
+    }).status(200).json({message : "Logout Successfully"})
+
+}
+
 
 // userVerification controller
 export const userVerification = async (req, res) => {
@@ -93,6 +153,7 @@ export const userVerification = async (req, res) => {
     }
 }
 
+
 // verificationCodeDeleted controller
 export const verificationCodeDeleted = async (req, res) => {
 
@@ -118,6 +179,7 @@ export const verificationCodeDeleted = async (req, res) => {
 
 }
 
+
 // resendCode controller
 export const resendCode = async (req, res) => {
 
@@ -133,7 +195,7 @@ export const resendCode = async (req, res) => {
 
         if (resendCodeSend.matchedCount === 0) return errorHandler(res, 404, "User Not Found", resendCodeSend.error)
 
-            sendVerificationEmail(email, verificationCode.toString())
+        sendVerificationEmail(email, verificationCode.toString())
         return successHandler(res, 200, "User verification code resend successfully", resendCodeSend)
     }
     catch (err) {

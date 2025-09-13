@@ -9,7 +9,7 @@ authRoutes.post('/signup' , rateLimiter(60 * 1000 , 2 , "Too Much Req") , signup
 
 authRoutes.post('/login' , rateLimiter(60 * 1000 , 2 , "Too Much Req") , loginController);
 
-authRoutes.patch('/logout' , rateLimiter(60 * 1000 , 2 , "Too Much Req") , logoutController);
+authRoutes.post('/logout' , rateLimiter(60 * 1000 , 2 , "Too Much Req") , logoutController);
 
 authRoutes.post('/verifyUser' , rateLimiter(60 * 1000 , 2 , "Too Much Req") , userVerification);
 
