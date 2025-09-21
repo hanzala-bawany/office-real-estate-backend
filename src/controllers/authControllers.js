@@ -156,10 +156,11 @@ export const userVerification = async (req, res) => {
 
 // verificationCodeDeleted controller
 export const verificationCodeDeleted = async (req, res) => {
+console.log("code deleter chala");
 
     try {
         const { email } = req.body
-        // console.log(email , "email jis ka varification code dekte kar na he ");
+        console.log(email , "email jis ka varification code delete kar na he ");
 
         const verificationCodeDeleted = await Users.updateOne({ email: email }, {
             $unset: {
@@ -168,12 +169,12 @@ export const verificationCodeDeleted = async (req, res) => {
         })
 
         if (verificationCodeDeleted.matchedCount === 0) return errorHandler(res, 404, "User Not Found", res.error)
-        // console.log(verificationCodeDeleted , "user ka ceriifcation code dleete ho gaya he ");
+        console.log(verificationCodeDeleted , "user ka ceriifcation code dleete ho gaya he ");
 
-        successHandler(res, 200, "User verification code deleted successfully", verificationCodeDeleted)
+        successHandler(res, 200, "Email verification code deleted successfully", verificationCodeDeleted)
     }
     catch (err) {
-        console.log(err, "<--- verificationCodeDeleterAfter3m  error he");
+        console.log(err, "<--- verificationCodeDeleterAfter3m me  error he");
         errorHandler(res, 404, "user not found", err)
     }
 
