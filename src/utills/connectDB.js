@@ -15,7 +15,7 @@ const connectDB = async () => {
 };
 
 // Jab connection toot jaye
-mongoose.connection.on('disconnected', () => {
+mongoose.connection.on('disconnected', (err) => {
   console.log('⚠️ MongoDB disconnected');
 });
 

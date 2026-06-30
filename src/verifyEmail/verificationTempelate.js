@@ -1,3 +1,5 @@
+
+
 export const verificatioTmpelat = (verificationCode) => {
   return `<!DOCTYPE html>
   <html lang="en">

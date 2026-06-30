@@ -97,13 +97,20 @@ export const loginController = async (req, res) => {
             { expiresIn: "24h" }
         );
 
+        const { password : userPass , ...resData} = isExist.toObject()
+
         res.cookie("token", token, {
             httpOnly: true,
-            sameSite: "Lax", 
+            sameSite: "Lax",
             secure: process.env.NODE_ENV === "development" ? false : true,
-        }).status(200).json("User login successfully");
+        }).status(200).json({
+            status: true,
+            message: "User login successfully",
+            data: resData ,
+        });
 
-        console.log("login in  successfully", isExist);
+        // console.log("login in  successfully", isExist.toObject());
+        console.log("resData in login controller", resData);
         sendWelcomeEmail(isExist.email, isExist.userName)
 
     } catch (err) {
@@ -116,11 +123,11 @@ export const loginController = async (req, res) => {
 
 export const logoutController = (req, res) => {
 
-    res.clearCookie("token" ,  {
+    res.clearCookie("token", {
         httpOnly: true,
-        sameSite: "Lax", 
+        sameSite: "Lax",
         secure: process.env.NODE_ENV === "development" ? false : true,
-    }).status(200).json({message : "Logout Successfully"})
+    }).status(200).json({ message: "Logout Successfully" })
 
 }
 
@@ -156,11 +163,11 @@ export const userVerification = async (req, res) => {
 
 // verificationCodeDeleted controller
 export const verificationCodeDeleted = async (req, res) => {
-console.log("code deleter chala");
+    console.log("code deleter chala");
 
     try {
         const { email } = req.body
-        console.log(email , "email jis ka varification code delete kar na he ");
+        console.log(email, "email jis ka varification code delete kar na he ");
 
         const verificationCodeDeleted = await Users.updateOne({ email: email }, {
             $unset: {
@@ -169,7 +176,7 @@ console.log("code deleter chala");
         })
 
         if (verificationCodeDeleted.matchedCount === 0) return errorHandler(res, 404, "User Not Found", res.error)
-        console.log(verificationCodeDeleted , "user ka ceriifcation code dleete ho gaya he ");
+        console.log(verificationCodeDeleted, "user ka ceriifcation code dleete ho gaya he ");
 
         successHandler(res, 200, "Email verification code deleted successfully", verificationCodeDeleted)
     }
